@@ -137,18 +137,23 @@ def draw_players():
         ctx.lineWidth = 2
         ctx.stroke()
 
-def draw_dice(value):
+def draw_dice(value): # <- FUNGSI INI DI-UPGRADE
+    x_base, y_base = WIDTH - 100, 20
     ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
-    ctx.fillRect(WIDTH - 100, 20, 80, 80)
-    ctx.strokeStyle = BLACK
-    ctx.lineWidth = 3
-    ctx.strokeRect(WIDTH - 100, 20, 80, 80)
-    
-    ctx.font = "48px Arial"
-    ctx.textAlign = "center"
-    ctx.textBaseline = "middle"
-    ctx.fillStyle = BLACK
-    ctx.fillText(str(value), WIDTH - 60, 60)
+    ctx.fillRect(x_base, y_base, 80, 80)
+    ctx.strokeStyle = BLACK; ctx.lineWidth = 3; ctx.strokeRect(x_base, y_base, 80, 80)
+    dots = {
+        1: [(40, 40)], 2: [(20, 20), (60, 60)], 3: [(20, 20), (40, 40), (60, 60)],
+        4: [(20, 20), (60, 20), (20, 60), (60, 60)],
+        5: [(20, 20), (60, 20), (40, 40), (20, 60), (60, 60)],
+        6: [(20, 20), (60, 20), (20, 40), (60, 40), (20, 60), (60, 60)]
+    }
+    if value in dots:
+        for px, py in dots[value]:
+            ctx.beginPath()
+            ctx.arc(x_base + px, y_base + py, 6, 0, 2 * math.pi)
+            ctx.fillStyle = BLACK
+            ctx.fill()
 
 # --- Fungsi Utama Permainan ---
 def redraw_all():
@@ -221,3 +226,4 @@ for btn in player_buttons:
 
 # --- Gambar Papan Awal ---
 draw_board()
+
