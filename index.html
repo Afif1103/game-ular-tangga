@@ -1,39 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ular Tangga 100 Kotak</title>
-    
-    <!-- 1. Memuat file CSS dan JS dari PyScript -->
-    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
-    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
-
+    <meta charset="utf-8">
+    <title>Ular Tangga Brython</title>
+    <script src="https://cdn.jsdelivr.net/npm/brython@3/brython.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/brython@3/brython_stdlib.js"></script>
     <style>
-        body { 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            margin: 0; 
-            background-color: #f0f0f0; 
-            font-family: sans-serif;
-        }
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; background-color: #f0f0f0; margin-top: 20px;}
+        #game-container { text-align: center; }
+        #game-canvas { border: 2px solid black; }
+        #ui-panel { margin-top: 15px; }
+        #roll-button { padding: 10px 20px; font-size: 18px; cursor: pointer; }
+        #info-text { margin-top: 10px; font-size: 20px; font-weight: bold; height: 30px;}
     </style>
 </head>
-<body>
-    <div id="loading-message">
-        <h1>Memuat Game Ular Tangga...</h1>
-        <p>Ini mungkin membutuhkan waktu beberapa saat pada pemuatan pertama.</p>
+<body onload="brython()">
+
+    <div id="game-container">
+        <canvas id="game-canvas" width="600" height="600"></canvas>
+        <div id="ui-panel">
+            <p id="info-text">Pilih Jumlah Pemain</p>
+            <div id="player-select-div">
+                <button class="player-btn" value="2">2 Pemain</button>
+                <button class="player-btn" value="3">3 Pemain</button>
+                <button class="player-btn" value="4">4 Pemain</button>
+            </div>
+            <button id="roll-button" style="display:none;">Lempar Dadu!</button>
+        </div>
     </div>
-    
-    <!-- 2. Konfigurasi PyScript untuk memuat pygame -->
-    <py-config>
-        packages = ["pygame-ce"]
-    </py-config>
-    
-    <!-- 3. Menjalankan script game Anda -->
-    <py-script src="./main.py"></py-script>
+
+    <script type="text/python" src="main.py"></script>
+
 </body>
 </html>
