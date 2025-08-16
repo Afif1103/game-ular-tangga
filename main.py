@@ -1,12 +1,10 @@
 from browser import document, html, timer
 import random
 import math
-import time # <--- BARIS 1: Impor pustaka 'time'
+import time
 
-# ================================================================= #
-#  PERBAIKAN PENTING UNTUK MEMASTIKAN DADU BENAR-BENAR ACAK          #
-# ================================================================= #
-random.seed(time.time()) # <--- BARIS 2: Atur benih acak dengan waktu saat ini
+# Mengatur 'benih' acak agar dadu benar-benar acak setiap kali
+random.seed(time.time())
 
 # --- Setup Elemen HTML dan Canvas ---
 canvas = document["game-canvas"]
@@ -36,15 +34,14 @@ PLAYER_COLORS = [RED, BLUE, GREEN, YELLOW]
 snakes  = {16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78}
 ladders = {1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100}
 
-# --- State Permainan ---
+# --- State Permainan (lebih sederhana) ---
 game_state = {
     "num_players": 0, "positions": [], "turn": 0, "winner": None,
-    "dice_result": 1, "is_animating": False,
-    "animation_start_time": 0, "last_flicker_time": 0,
+    "dice_result": 1, "is_moving": False, # 'is_animating' diganti 'is_moving'
     "steps_to_move": 0, "move_animation_id": None
 }
 
-# --- Fungsi Utilitas & Menggambar ---
+# --- Fungsi Utilitas & Menggambar (Tidak ada perubahan) ---
 def get_pos(square):
     if square < 1: square = 1;
     if square > 100: square = 100
@@ -70,15 +67,10 @@ def draw_board():
         for c in range(COLS):
             draw_row = ROWS - 1 - r
             base = draw_row * COLS
-            if draw_row % 2 == 0:
-                num = base + c + 1
-            else:
-                num = base + (COLS - 1 - c) + 1
+            num = base + c + 1 if draw_row % 2 == 0 else base + (COLS - 1 - c) + 1
             rect_x, rect_y = c * CELL_SIZE, r * CELL_SIZE
-            if (r + c) % 2 == 0:
-                ctx.fillStyle = CELL_COLOR_1
-            else:
-                ctx.fillStyle = CELL_COLOR_2
+            if (r + c) % 2 == 0: ctx.fillStyle = CELL_COLOR_1
+            else: ctx.fillStyle = CELL_COLOR_2
             ctx.fillRect(rect_x, rect_y, CELL_SIZE, CELL_SIZE)
             ctx.strokeStyle = BLACK; ctx.lineWidth = 1; ctx.strokeRect(rect_x, rect_y, CELL_SIZE, CELL_SIZE)
             ctx.fillStyle = BLACK; ctx.fillText(str(num), rect_x + 5, rect_y + 5)
@@ -137,37 +129,33 @@ def finish_move():
         game_state["winner"] = player_idx
     else:
         game_state["turn"] = (game_state["turn"] + 1) % game_state["num_players"]
-    game_state["is_animating"] = False
+    game_state["is_moving"] = False
     roll_button.disabled = False
     redraw_all()
 
-def animation_loop(timestamp):
-    if not game_state["is_animating"]: return
-    elapsed_time = timestamp - game_state["animation_start_time"]
-    if elapsed_time > 1500:
-        finish_roll()
-        return
-    time_since_flicker = timestamp - game_state["last_flicker_time"]
-    if time_since_flicker > 100:
-        game_state["dice_result"] = random.randint(1, 6)
-        game_state["last_flicker_time"] = timestamp
-        redraw_all()
-    timer.request_animation_frame(animation_loop)
+# --- FUNGSI UTAMA & EVENT HANDLER (Sederhana)---
 
-def finish_roll():
+def handle_roll(event):
+    """Langsung lempar dadu dan mulai gerakan pion."""
+    if game_state["is_moving"] or game_state["winner"] is not None: return
+
+    game_state["is_moving"] = True
+    roll_button.disabled = True
+    
+    # Langsung dapatkan hasil dadu
     rolled_value = random.randint(1, 6)
     game_state["dice_result"] = rolled_value
     game_state["steps_to_move"] = rolled_value
+    
+    # Tampilkan hasil dadu di layar
     redraw_all()
-    game_state["move_animation_id"] = timer.set_interval(move_one_step, 220)
+    
+    # Langsung mulai animasi pergerakan pion setelah jeda singkat
+    timer.set_timeout(lambda: start_pawn_animation(), 200)
 
-def handle_roll(event):
-    if game_state["is_animating"] or game_state["winner"] is not None: return
-    game_state["is_animating"] = True
-    roll_button.disabled = True
-    game_state["animation_start_time"] = timer.perf_counter()
-    game_state["last_flicker_time"] = game_state["animation_start_time"]
-    timer.request_animation_frame(animation_loop)
+def start_pawn_animation():
+    """Memulai timer untuk gerakan pion."""
+    game_state["move_animation_id"] = timer.set_interval(move_one_step, 220)
 
 def start_game(event):
     num = int(event.target.value)
