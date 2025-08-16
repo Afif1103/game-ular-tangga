@@ -3,167 +3,173 @@ import random
 
 canvas = document["game-canvas"]
 ctx = canvas.getContext("2d")
+cell_size = canvas.width // 10
 
-ROWS, COLS = 10, 10
-CELL_SIZE = canvas.width // COLS
-
-# pemain
-player_count = 0
 players = []
-player_colors = ["red", "blue", "green", "purple"]
 positions = []
-
-# giliran
 turn = 0
 rolling = False
+roll_timer = None
+roll_count = 0
 
 # ular dan tangga
-snakes = {16: 6, 48: 26, 62: 18, 88: 24, 95: 56, 97: 78}
-ladders = {1: 38, 4: 14, 9: 31, 28: 84, 21: 42, 51: 67, 72: 91, 80: 99}
+ladders = {3:22, 5:8, 11:26, 20:29, 27:56, 21:82, 43:77, 50:91, 57:76, 72:92}
+snakes  = {17:4, 19:7, 21:9, 27:1, 54:34, 62:18, 64:60, 87:24, 93:73, 95:75, 98:79}
 
-# --- gambar papan ---
+colors = ["red","blue","green","purple"]
+
+def get_coords(pos):
+    if pos < 1: return (0,9)
+    pos -= 1
+    row = pos // 10
+    col = pos % 10
+    if row % 2 == 0:
+        x = col
+    else:
+        x = 9 - col
+    y = 9 - row
+    return (x, y)
+
 def draw_board():
     ctx.clearRect(0,0,canvas.width,canvas.height)
-    num = 1
-    for r in range(ROWS):
-        for c in range(COLS):
-            row = r
-            if row % 2 == 0:
-                col = c
-            else:
-                col = COLS - 1 - c
-
-            x = col * CELL_SIZE
-            y = (ROWS-1-r) * CELL_SIZE   # penting! mulai dari bawah
-
-            # warna kotak
-            if (r+c) % 2 == 0:
-                ctx.fillStyle = "#fffacd"
-            else:
-                ctx.fillStyle = "#e6e6fa"
-            ctx.fillRect(x,y,CELL_SIZE,CELL_SIZE)
-
-            ctx.strokeStyle = "black"
-            ctx.strokeRect(x,y,CELL_SIZE,CELL_SIZE)
-
-            # nomor
-            ctx.fillStyle = "black"
-            ctx.font = "12px Arial"
-            ctx.fillText(str(num), x+3, y+12)
-            num += 1
-
+    ctx.font = "14px Arial"
+    for i in range(100):
+        row = i // 10
+        col = i % 10
+        if row % 2 == 0:
+            x = col
+        else:
+            x = 9 - col
+        y = 9 - row
+        ctx.strokeStyle = "black"
+        ctx.strokeRect(x*cell_size, y*cell_size, cell_size, cell_size)
+        ctx.fillStyle = "black"
+        ctx.fillText(str(i+1), x*cell_size+5, y*cell_size+15)
     # tangga
     ctx.strokeStyle = "green"
-    ctx.lineWidth = 5
-    for start,end in ladders.items():
-        x1,y1 = cell_center(start)
-        x2,y2 = cell_center(end)
+    ctx.lineWidth = 4
+    for s,e in ladders.items():
+        x1,y1 = get_coords(s)
+        x2,y2 = get_coords(e)
         ctx.beginPath()
-        ctx.moveTo(x1,y1)
-        ctx.lineTo(x2,y2)
+        ctx.moveTo(x1*cell_size+cell_size//2, y1*cell_size+cell_size//2)
+        ctx.lineTo(x2*cell_size+cell_size//2, y2*cell_size+cell_size//2)
         ctx.stroke()
-
+        ctx.beginPath()
+        ctx.moveTo(x2*cell_size+cell_size//2, y2*cell_size+cell_size//2)
+        ctx.lineTo(x2*cell_size+cell_size//2-10, y2*cell_size+cell_size//2-10)
+        ctx.lineTo(x2*cell_size+cell_size//2+10, y2*cell_size+cell_size//2-10)
+        ctx.closePath()
+        ctx.fillStyle = "green"
+        ctx.fill()
     # ular
     ctx.strokeStyle = "brown"
-    ctx.lineWidth = 5
-    for head,tail in snakes.items():
-        x1,y1 = cell_center(head)
-        x2,y2 = cell_center(tail)
+    ctx.lineWidth = 4
+    for s,e in snakes.items():
+        x1,y1 = get_coords(s)
+        x2,y2 = get_coords(e)
         ctx.beginPath()
-        ctx.moveTo(x1,y1)
-        ctx.lineTo(x2,y2)
+        ctx.moveTo(x1*cell_size+cell_size//2, y1*cell_size+cell_size//2)
+        ctx.lineTo(x2*cell_size+cell_size//2, y2*cell_size+cell_size//2)
         ctx.stroke()
+        ctx.beginPath()
+        ctx.moveTo(x2*cell_size+cell_size//2, y2*cell_size+cell_size//2)
+        ctx.lineTo(x2*cell_size+cell_size//2-10, y2*cell_size+cell_size//2+10)
+        ctx.lineTo(x2*cell_size+cell_size//2+10, y2*cell_size+cell_size//2+10)
+        ctx.closePath()
+        ctx.fillStyle = "brown"
+        ctx.fill()
 
-# --- posisi kotak ---
-def cell_center(n):
-    row = (n-1) // COLS
-    col = (n-1) % COLS
-    if row % 2 == 1:
-        col = COLS - 1 - col
-    x = col * CELL_SIZE + CELL_SIZE//2
-    y = (ROWS-1-row) * CELL_SIZE + CELL_SIZE//2
-    return (x,y)
-
-# --- gambar pion ---
 def draw_players():
     for i,pos in enumerate(positions):
-        if pos < 1: continue
-        x,y = cell_center(pos)
-        offset = (i-1.5)*10
+        x,y = get_coords(pos)
         ctx.beginPath()
-        ctx.arc(x+offset,y,10,0,6.28)
-        ctx.fillStyle = player_colors[i]
+        ctx.arc(x*cell_size+cell_size//2 + (i*10-15), y*cell_size+cell_size//2, 10, 0, 6.28)
+        ctx.fillStyle = colors[i]
         ctx.fill()
-        ctx.stroke()
 
-# --- giliran ---
-def next_turn():
-    global turn
-    turn = (turn+1) % player_count
-    document["info-text"].text = f"Giliran Pemain {turn+1}"
-
-# ---------- Dice (dot-face animation) ----------
-def draw_dice_face(value):
-    size = 60
-    x = canvas.width - size - 10
-    y = 10
-    # background
+def draw_dice(value):
+    size = 80
+    x, y = canvas.width - size - 10, 10
     ctx.fillStyle = "white"
     ctx.fillRect(x, y, size, size)
-    ctx.strokeStyle = "#222"
+    ctx.strokeStyle = "black"
+    ctx.lineWidth = 2
     ctx.strokeRect(x, y, size, size)
-    # dot positions inside the dice box (relative)
-    dots = {
-        1: [(0.5, 0.5)],
-        2: [(0.25, 0.25), (0.75, 0.75)],
-        3: [(0.25, 0.25), (0.5, 0.5), (0.75, 0.75)],
-        4: [(0.25, 0.25), (0.25, 0.75), (0.75, 0.25), (0.75, 0.75)],
-        5: [(0.25, 0.25), (0.25, 0.75), (0.5, 0.5), (0.75, 0.25), (0.75, 0.75)],
-        6: [(0.25, 0.25), (0.25, 0.5), (0.25, 0.75), (0.75, 0.25), (0.75, 0.5), (0.75, 0.75)]
+
+    ctx.fillStyle = "black"
+    r = 6
+    mid = x + size//2
+    top = y + size//4
+    bottom = y + 3*size//4
+    left = x + size//4
+    right = x + 3*size//4
+
+    positions_map = {
+        1: [(mid, mid)],
+        2: [(left, top), (right, bottom)],
+        3: [(left, top), (mid, mid), (right, bottom)],
+        4: [(left, top), (right, top), (left, bottom), (right, bottom)],
+        5: [(left, top), (right, top), (mid, mid), (left, bottom), (right, bottom)],
+        6: [(left, top), (right, top), (left, mid), (right, mid), (left, bottom), (right, bottom)]
     }
-    ctx.fillStyle = "#111"
-    for rx, ry in dots[value]:
-        cx = x + int(rx * size)
-        cy = y + int(ry * size)
+
+    for (cx, cy) in positions_map[value]:
         ctx.beginPath()
-        ctx.arc(cx, cy, 6, 0, 2 * math.pi)
+        ctx.arc(cx, cy, r, 0, 6.28)
         ctx.fill()
 
-def finish_roll():
-    global rolling
-    val = random.randint(1,6)
-    document["info-text"].text = f"Pemain {turn+1} dapat {val}"
-    positions[turn] += val
-    if positions[turn] in ladders:
-        positions[turn] = ladders[positions[turn]]
-    elif positions[turn] in snakes:
-        positions[turn] = snakes[positions[turn]]
-    if positions[turn] >= 100:
-        document["info-text"].text = f"Pemain {turn+1} MENANG!"
-        document["roll-button"].disabled = True
-    else:
-        next_turn()
-    draw_board()
-    draw_players()
-    rolling = False
-
-# --- pilih pemain ---
-def choose_players(ev):
-    global player_count, players, positions
-    player_count = int(ev.target.value)
-    positions = [0]*player_count
+def start_game(n):
+    global players, positions, turn
+    players = list(range(n))
+    positions = [0]*n
+    turn = 0
     document["player-select-div"].style.display = "none"
-    document["roll-button"].style.display = "inline-block"
-    document["info-text"].text = "Giliran Pemain 1"
+    document["roll-button"].style.display = "inline"
+    document["info-text"].text = f"Pemain {turn+1} giliran lempar dadu"
     draw_board()
     draw_players()
 
-# --- event ---
+def roll_click(ev):
+    global rolling, roll_count
+    if rolling: return
+    rolling = True
+    roll_count = 0
+    animate_roll()
+
+def animate_roll():
+    global roll_count, roll_timer
+    roll_count += 1
+    val = random.randint(1,6)
+    document["info-text"].text = f"Pemain {turn+1} lempar..."
+    draw_board()
+    draw_players()
+    draw_dice(val)
+    if roll_count < 15:
+        roll_timer = timer.set_timeout(animate_roll, 100)
+    else:
+        finish_roll(val)
+
+def finish_roll(val):
+    global turn, rolling
+    document["info-text"].text = f"Pemain {turn+1} dapat {val}"
+    newpos = positions[turn] + val
+    if newpos <= 100:
+        positions[turn] = newpos
+    if positions[turn] in ladders: positions[turn] = ladders[positions[turn]]
+    if positions[turn] in snakes: positions[turn] = snakes[positions[turn]]
+    draw_board()
+    draw_players()
+    draw_dice(val)
+    if positions[turn] == 100:
+        document["info-text"].text = f"🎉 Pemain {turn+1} MENANG!"
+        document["roll-button"].style.display = "none"
+        return
+    turn = (turn+1)%len(players)
+    rolling = False
+    timer.set_timeout(lambda: document.__setitem__("info-text", f"Pemain {turn+1} giliran lempar dadu"), 1000)
+
 for btn in document.select(".player-btn"):
-    btn.bind("click", choose_players)
+    btn.bind("click", lambda ev, n=int(ev.target.value): start_game(n))
 
-document["roll-button"].bind("click", roll_dice)
-
-# awal
-draw_board()
-
+document["roll-button"].bind("click", roll_click)
