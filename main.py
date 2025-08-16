@@ -1,12 +1,10 @@
 from browser import document, html, timer
 import random
 import math
-import time # <--- BARIS 1: Impor pustaka 'time'
+import time
 
-# ================================================================= #
-#  PERBAIKAN PENTING: Ini membuat dadu benar-benar acak setiap kali  #
-# ================================================================= #
-random.seed(time.time()) # <--- BARIS 2: Atur benih acak dengan waktu saat ini
+# Mengatur 'benih' acak agar dadu benar-benar acak setiap kali
+random.seed(time.time())
 
 # --- Setup Elemen HTML dan Canvas ---
 canvas = document["game-canvas"]
@@ -39,7 +37,8 @@ ladders = {1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100}
 # --- State Permainan ---
 game_state = {
     "num_players": 0, "positions": [], "turn": 0, "winner": None,
-    "dice_result": 1, "is_moving": False,
+    "dice_result": 1, "is_animating": False,
+    "animation_start_time": 0, "last_flicker_time": 0,
     "steps_to_move": 0, "move_animation_id": None
 }
 
@@ -131,22 +130,37 @@ def finish_move():
         game_state["winner"] = player_idx
     else:
         game_state["turn"] = (game_state["turn"] + 1) % game_state["num_players"]
-    game_state["is_moving"] = False
+    game_state["is_animating"] = False
     roll_button.disabled = False
     redraw_all()
 
-def handle_roll(event):
-    if game_state["is_moving"] or game_state["winner"] is not None: return
-    game_state["is_moving"] = True
-    roll_button.disabled = True
+def animation_loop(timestamp):
+    if not game_state["is_animating"]: return
+    elapsed_time = timestamp - game_state["animation_start_time"]
+    if elapsed_time > 1500:
+        finish_roll()
+        return
+    time_since_flicker = timestamp - game_state["last_flicker_time"]
+    if time_since_flicker > 100:
+        game_state["dice_result"] = random.randint(1, 6)
+        game_state["last_flicker_time"] = timestamp
+        redraw_all()
+    timer.request_animation_frame(animation_loop)
+
+def finish_roll():
     rolled_value = random.randint(1, 6)
     game_state["dice_result"] = rolled_value
     game_state["steps_to_move"] = rolled_value
     redraw_all()
-    timer.set_timeout(lambda: start_pawn_animation(), 200)
-
-def start_pawn_animation():
     game_state["move_animation_id"] = timer.set_interval(move_one_step, 220)
+
+def handle_roll(event):
+    if game_state["is_animating"] or game_state["winner"] is not None: return
+    game_state["is_animating"] = True
+    roll_button.disabled = True
+    game_state["animation_start_time"] = timer.perf_counter()
+    game_state["last_flicker_time"] = game_state["animation_start_time"]
+    timer.request_animation_frame(animation_loop)
 
 def start_game(event):
     num = int(event.target.value)
