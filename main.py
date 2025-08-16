@@ -1,6 +1,12 @@
 from browser import document, html, timer
 import random
 import math
+import time # <--- BARIS 1: Impor pustaka 'time'
+
+# ================================================================= #
+#  PERBAIKAN PENTING UNTUK MEMASTIKAN DADU BENAR-BENAR ACAK          #
+# ================================================================= #
+random.seed(time.time()) # <--- BARIS 2: Atur benih acak dengan waktu saat ini
 
 # --- Setup Elemen HTML dan Canvas ---
 canvas = document["game-canvas"]
@@ -164,18 +170,11 @@ def handle_roll(event):
     timer.request_animation_frame(animation_loop)
 
 def start_game(event):
-    """Memulai permainan setelah jumlah pemain dipilih."""
     num = int(event.target.value)
     game_state["num_players"] = num
-    
-    # ======================================================= #
-    # PERBAIKAN PENTING ADA DI SINI: Pemain mulai dari posisi 1
-    # ======================================================= #
-    game_state["positions"] = [1] * num 
-    
+    game_state["positions"] = [1] * num
     player_select_div.style.display = "none"
     roll_button.style.display = "inline-block"
-    
     redraw_all()
 
 # --- Ikat Event dan Gambar Papan Awal ---
