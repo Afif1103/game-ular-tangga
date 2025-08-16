@@ -54,7 +54,7 @@ def get_pos(square):
 
 def draw_arrowhead(tip, tail, color):
     tx, ty = tip; sx, sy = tail; dx, dy = tx - sx, ty - sy
-    L = math.hypot(dx, dy)
+    L = math.hypot(dx, dy);
     if L == 0: return
     ux, uy = dx / L, dy / L
     head_len, head_w = 20, 10
@@ -110,8 +110,7 @@ def update_info_text():
 def move_one_step():
     player_idx = game_state["turn"]
     if game_state["steps_to_move"] <= 0 or game_state["positions"][player_idx] >= 100:
-        finish_move()
-        return
+        finish_move(); return
     game_state["positions"][player_idx] += 1
     game_state["steps_to_move"] -= 1
     redraw_all()
@@ -120,16 +119,12 @@ def finish_move():
     timer.clear_interval(game_state["move_animation_id"])
     player_idx = game_state["turn"]
     current_pos = game_state["positions"][player_idx]
-    if current_pos in snakes:
-        game_state["positions"][player_idx] = snakes[current_pos]
-    elif current_pos in ladders:
-        game_state["positions"][player_idx] = ladders[current_pos]
+    if current_pos in snakes: game_state["positions"][player_idx] = snakes[current_pos]
+    elif current_pos in ladders: game_state["positions"][player_idx] = ladders[current_pos]
     redraw_all()
     if game_state["positions"][player_idx] >= 100:
-        game_state["positions"][player_idx] = 100
-        game_state["winner"] = player_idx
-    else:
-        game_state["turn"] = (game_state["turn"] + 1) % game_state["num_players"]
+        game_state["positions"][player_idx] = 100; game_state["winner"] = player_idx
+    else: game_state["turn"] = (game_state["turn"] + 1) % game_state["num_players"]
     game_state["is_animating"] = False
     roll_button.disabled = False
     redraw_all()
@@ -137,11 +132,14 @@ def finish_move():
 def animation_loop(timestamp):
     if not game_state["is_animating"]: return
     elapsed_time = timestamp - game_state["animation_start_time"]
-    if elapsed_time > 1500:
-        finish_roll()
-        return
+    
+    # Animasi berjalan selama 2 detik (lebih lama agar terlihat)
+    if elapsed_time > 2000:
+        finish_roll(); return
+        
     time_since_flicker = timestamp - game_state["last_flicker_time"]
-    if time_since_flicker > 100:
+    # Angka berganti setiap 150ms (lebih lambat agar terlihat)
+    if time_since_flicker > 150:
         game_state["dice_result"] = random.randint(1, 6)
         game_state["last_flicker_time"] = timestamp
         redraw_all()
