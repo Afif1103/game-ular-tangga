@@ -119,7 +119,7 @@ def draw_dice(surface, value):
             pygame.draw.circle(surface, BLACK, (px, py), 6)
 
 # --- Fungsi Logika Permainan ---
-def roll_dice_animation(current_positions, duration=3.0, interval_ms=250):
+def roll_dice_animation(current_positions, duration=1.5, interval_ms=100):
     """Menampilkan animasi dadu yang sedang dikocok."""
     dice_surface = pygame.Surface((80, 80), pygame.SRCALPHA)
     val = 1
@@ -129,7 +129,8 @@ def roll_dice_animation(current_positions, duration=3.0, interval_ms=250):
     while pygame.time.get_ticks() - start_ms < int(duration * 1000):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit(); sys.exit()
+                # Saat di web, quit tidak bisa menghentikan script, jadi kita return saja
+                return -1 # Angka -1 sebagai penanda pembatalan
         now = pygame.time.get_ticks()
         if now - last_ms >= interval_ms:
             val = random.randint(1, 6)
@@ -150,14 +151,14 @@ def move_player_stepwise(positions, player_idx, steps):
         draw_board()
         draw_players(positions)
         pygame.display.flip()
-        pygame.time.wait(220)
-    
+        pygame.time.wait(200)
+
     sq = positions[player_idx]
     if sq in snakes:
         positions[player_idx] = snakes[sq]
     elif sq in ladders:
         positions[player_idx] = ladders[sq]
-    
+
     # Setelah turun/naik, gambar ulang posisi akhir
     draw_board()
     draw_players(positions)
@@ -175,6 +176,7 @@ def draw_button(rect, label, hovered=False):
 
 def menu_pemain_mouse():
     """Menampilkan menu untuk memilih jumlah pemain."""
+    # Loop ini akan terus berjalan sampai pemain memilih jumlah
     while True:
         screen.fill(WHITE)
         title = bigfont.render("Pilih Jumlah Pemain", True, BLACK)
@@ -194,13 +196,16 @@ def menu_pemain_mouse():
             buttons.append((rect, val))
 
         pygame.display.flip()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit(); sys.exit()
+                # Di web, ini tidak akan menutup tab, tapi kita harus menanganinya
+                # agar tidak macet. Kita bisa saja me-return nilai default.
+                return 2 # Default 2 pemain jika tab ditutup
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 for rect, val in buttons:
                     if rect.collidepoint(event.pos):
-                        return val
+                        return val # Kembalikan jumlah pemain dan keluar dari loop
         clock.tick(60)
 
 # --- Fungsi Utama (Main Loop) ---
@@ -224,13 +229,25 @@ def main():
                     running = False
                 if winner is None and event.key == pygame.K_SPACE:
                     rolled_value = roll_dice_animation(positions)
+                    
+                    # Cek jika animasi dibatalkan (mis. event QUIT)
+                    if rolled_value == -1:
+                        running = False
+                        break
+
                     dice_result = rolled_value
                     move_player_stepwise(positions, turn, dice_result)
+                    
                     if positions[turn] >= 100:
                         positions[turn] = 100
                         winner = turn
+                    
                     if winner is None:
                         turn = (turn + 1) % num_players
+
+        # Keluar dari loop utama jika 'running' menjadi False dari dalam event handling
+        if not running:
+            break
 
         # Logika Menggambar (Apa yang tampil di layar)
         draw_board()
@@ -250,8 +267,5 @@ def main():
         pygame.display.flip()
         clock.tick(60)
 
-    pygame.quit()
-    sys.exit()
 
-if __name__ == "__main__":
-    main()
+main()
