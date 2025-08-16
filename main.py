@@ -1,34 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Game Ular Tangga - Brython</title>
-  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.9.5/brython.min.js"></script>
-  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.9.5/brython_stdlib.js"></script>
-  <style>
-    body { text-align: center; font-family: Arial; }
-    #game-canvas { border: 2px solid black; background: #f9f9f9; }
-    #controls { margin-top: 10px; }
-  </style>
-</head>
-<body onload="brython()">
-
-<h2>🎲 Game Ular Tangga</h2>
-
-<canvas id="game-canvas" width="600" height="600"></canvas>
-
-<div id="controls">
-  <label for="player-count">Jumlah Pemain:</label>
-  <select id="player-count">
-    <option value="2">2</option>
-    <option value="3">3</option>
-    <option value="4">4</option>
-  </select>
-  <button id="start-button">Mulai Game</button>
-  <button id="roll-button" disabled>Lempar Dadu</button>
-</div>
-
-<script type="text/python">
 from browser import document, html, timer
 import random, math
 
@@ -192,7 +161,5 @@ document["roll-button"].bind("click", animate_dice)
 
 draw_board()
 draw_dice(1)
-</script>
 
-</body>
-</html>
+
