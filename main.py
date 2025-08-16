@@ -160,7 +160,7 @@ def handle_roll(event):
     game_state["expected_answer"] = rolled_value + current_pos
 
     question_div.style.display = "block"
-    question_div.textContent = f"{game_state['player_names'][player_idx]}, Dice: {rolled_value}, Posisi sekarang: {current_pos}\nBerapa jumlahnya?"
+    question_div.textContent = f"{game_state['player_names'][player_idx]}:---- Dadu {rolled_value}, Posisi sekarang: {current_pos}\nBerapa jumlahnya?"
     answer_input.value = ""
 
 def check_answer(event):
@@ -210,3 +210,4 @@ roll_button.bind("click", handle_roll)
 submit_btn.bind("click", check_answer)
 
 draw_board()
+
