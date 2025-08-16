@@ -4,11 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ular Tangga 100 Kotak</title>
-    <!-- 1. Muat file CSS dan JS dari PyScript -->
+    
+    <!-- 1. Memuat file CSS dan JS dari PyScript -->
     <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
     <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+
     <style>
-        body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f0f0; }
+        body { 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            background-color: #f0f0f0; 
+            font-family: sans-serif;
+        }
     </style>
 </head>
 <body>
@@ -16,10 +27,13 @@
         <h1>Memuat Game Ular Tangga...</h1>
         <p>Ini mungkin membutuhkan waktu beberapa saat pada pemuatan pertama.</p>
     </div>
-    <!-- 2. Area untuk menjalankan script Python Anda -->
+    
+    <!-- 2. Konfigurasi PyScript untuk memuat pygame -->
     <py-config>
-    packages = ["pygame-ce"]
+        packages = ["pygame-ce"]
     </py-config>
+    
+    <!-- 3. Menjalankan script game Anda -->
     <py-script src="./main.py"></py-script>
 </body>
 </html>
