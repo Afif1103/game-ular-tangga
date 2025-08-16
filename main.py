@@ -102,20 +102,32 @@ def next_turn():
     turn = (turn+1) % player_count
     document["info-text"].text = f"Giliran Pemain {turn+1}"
 
-# --- lempar dadu ---
-def roll_dice(ev):
-    global rolling
-    if rolling: return
-    rolling = True
-    steps = random.randint(15,25)   # animasi acak
-    def animate(count):
-        if count==0:
-            finish_roll()
-            return
-        val = random.randint(1,6)
-        document["info-text"].text = f"Pemain {turn+1} lempar: {val}"
-        timer.set_timeout(lambda: animate(count-1),100)
-    animate(steps)
+# ---------- Dice (dot-face animation) ----------
+def draw_dice_face(value):
+    size = 60
+    x = canvas.width - size - 10
+    y = 10
+    # background
+    ctx.fillStyle = "white"
+    ctx.fillRect(x, y, size, size)
+    ctx.strokeStyle = "#222"
+    ctx.strokeRect(x, y, size, size)
+    # dot positions inside the dice box (relative)
+    dots = {
+        1: [(0.5, 0.5)],
+        2: [(0.25, 0.25), (0.75, 0.75)],
+        3: [(0.25, 0.25), (0.5, 0.5), (0.75, 0.75)],
+        4: [(0.25, 0.25), (0.25, 0.75), (0.75, 0.25), (0.75, 0.75)],
+        5: [(0.25, 0.25), (0.25, 0.75), (0.5, 0.5), (0.75, 0.25), (0.75, 0.75)],
+        6: [(0.25, 0.25), (0.25, 0.5), (0.25, 0.75), (0.75, 0.25), (0.75, 0.5), (0.75, 0.75)]
+    }
+    ctx.fillStyle = "#111"
+    for rx, ry in dots[value]:
+        cx = x + int(rx * size)
+        cy = y + int(ry * size)
+        ctx.beginPath()
+        ctx.arc(cx, cy, 6, 0, 2 * math.pi)
+        ctx.fill()
 
 def finish_roll():
     global rolling
@@ -154,3 +166,4 @@ document["roll-button"].bind("click", roll_dice)
 
 # awal
 draw_board()
+
