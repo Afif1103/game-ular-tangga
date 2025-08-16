@@ -12,12 +12,10 @@ info_text = document["info-text"]
 roll_button = document["roll-button"]
 player_select_div = document["player-select-div"]
 player_buttons = document.select(".player-btn")
-# ELEMEN BARU UNTUK KUIS
 quiz_div = document["quiz-div"]
 quiz_question = document["quiz-question"]
 quiz_answer = document["quiz-answer"]
 quiz_submit_btn = document["quiz-submit-btn"]
-
 
 # --- Konstanta & State Permainan ---
 WIDTH, HEIGHT = 600, 600
@@ -37,7 +35,7 @@ game_state = {
     "num_players": 0, "positions": [], "turn": 0, "winner": None, "dice_result": 1, 
     "is_animating": False, "animation_start_time": 0, "last_flicker_time": 0,
     "steps_to_move": 0, "move_animation_id": None,
-    "is_awaiting_answer": False, "correct_answer": 0 # STATE BARU UNTUK KUIS
+    "is_awaiting_answer": False, "correct_answer": 0
 }
 
 # --- Fungsi Menggambar (Tidak ada perubahan) ---
@@ -93,15 +91,13 @@ def redraw_all():
     draw_board(); draw_players(); draw_dice(game_state["dice_result"]); update_info_text()
 
 def update_info_text():
-    if game_state["is_awaiting_answer"]: return # Jangan ubah teks saat kuis
+    if game_state["is_awaiting_answer"]: return
     if game_state["winner"] is not None:
         info_text.textContent = f"🎉 Player {game_state['winner'] + 1} MENANG!"
     else: info_text.textContent = f"Giliran Player {game_state['turn'] + 1}"
 
 def next_turn():
-    """Mengganti giliran dan mereset UI."""
     game_state["turn"] = (game_state["turn"] + 1) % game_state["num_players"]
-    game_state["is_animating"] = False
     roll_button.disabled = False
     roll_button.style.display = "inline-block"
     quiz_div.style.display = "none"
@@ -130,12 +126,34 @@ def finish_move():
     else:
         next_turn()
 
+# --- Logika Kuis ---
+def handle_submit_answer(event):
+    if not game_state["is_awaiting_answer"]: return
+    try: user_answer = int(quiz_answer.value)
+    except ValueError: user_answer = -1
+    
+    if user_answer == game_state["correct_answer"]:
+        info_text.textContent = "Jawaban Benar!"
+        game_state["steps_to_move"] = game_state["dice_result"]
+        quiz_div.style.display = "none"
+        game_state["move_animation_id"] = timer.set_interval(move_one_step, 220)
+    else:
+        info_text.textContent = "Jawaban Salah! Giliran dilewatkan."
+        quiz_div.style.display = "none"
+        timer.set_timeout(lambda: next_turn(), 1500)
+        
+    game_state["is_awaiting_answer"] = False
+
+def handle_keypress_answer(event):
+    if event.key == "Enter": handle_submit_answer(event)
+
+# --- Logika Dadu & Alur Utama ---
 def animation_loop(timestamp):
     if not game_state["is_animating"]: return
     elapsed_time = timestamp - game_state["animation_start_time"]
     if elapsed_time > 1500:
         finish_roll(); return
-    time_since_flicker = timestamp - game_gstate["last_flicker_time"]
+    time_since_flicker = timestamp - game_state["last_flicker_time"]
     if time_since_flicker > 100:
         game_state["dice_result"] = random.randint(1, 6)
         game_state["last_flicker_time"] = timestamp
@@ -146,13 +164,12 @@ def finish_roll():
     """Selesai kocok dadu, sekarang TAMPILKAN KUIS."""
     rolled_value = random.randint(1, 6)
     game_state["dice_result"] = rolled_value
-    redraw_all() # Tampilkan hasil dadu final
+    redraw_all()
     
     current_pos = game_state["positions"][game_state["turn"]]
     game_state["correct_answer"] = current_pos + rolled_value
     game_state["is_awaiting_answer"] = True
     
-    # Update UI untuk kuis
     info_text.textContent = "Jawab Pertanyaan!"
     quiz_question.textContent = f"Posisi Anda ({current_pos}) + Dadu ({rolled_value}) = ?"
     roll_button.style.display = "none"
@@ -160,36 +177,8 @@ def finish_roll():
     quiz_answer.value = ""
     quiz_answer.focus()
 
-# --- FUNGSI BARU UNTUK MENANGANI JAWABAN KUIS ---
-def handle_submit_answer(event):
-    if not game_state["is_awaiting_answer"]: return
-    
-    try:
-        user_answer = int(quiz_answer.value)
-    except ValueError:
-        user_answer = -1 # Jawaban tidak valid
-
-    if user_answer == game_state["correct_answer"]:
-        info_text.textContent = "Jawaban Benar!"
-        game_state["steps_to_move"] = game_state["dice_result"]
-        quiz_div.style.display = "none"
-        game_state["move_animation_id"] = timer.set_interval(move_one_step, 220)
-    else:
-        info_text.textContent = "Jawaban Salah! Giliran dilewatkan."
-        quiz_div.style.display = "none"
-        # Langsung ganti giliran tanpa bergerak
-        timer.set_timeout(lambda: next_turn(), 1500) # Beri jeda agar pemain bisa baca
-        
-    game_state["is_awaiting_answer"] = False
-
-def handle_keypress_answer(event):
-    """Memungkinkan menekan Enter untuk menjawab."""
-    if event.key == "Enter":
-        handle_submit_answer(event)
-
-# --- FUNGSI UTAMA & EVENT HANDLER ---
 def handle_roll(event):
-    if game_state["is_animating"] or game_state["winner"] is not None: return
+    if game_state["is_animating"] or game_state["winner"] is not None or game_state["is_awaiting_answer"]: return
     game_state["is_animating"] = True
     roll_button.disabled = True
     game_state["animation_start_time"] = timer.perf_counter()
