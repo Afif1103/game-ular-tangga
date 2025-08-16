@@ -22,6 +22,7 @@
         #question-div { margin-top: 15px; font-size: 18px; font-weight: bold; }
         #answer-input { padding: 5px 10px; font-size: 16px; width: 80px; }
         #submit-btn { padding: 5px 15px; font-size: 16px; cursor: pointer; margin-left: 5px; }
+        #player-names-div { margin-top: 10px; }
     </style>
 </head>
 <body onload="brython()">
@@ -35,9 +36,14 @@
                 <button class="player-btn" value="3">3 Pemain</button>
                 <button class="player-btn" value="4">4 Pemain</button>
             </div>
+
+            <div id="player-names-div" style="display:none;">
+                <div id="name-inputs"></div>
+                <button id="start-game-btn">Mulai Game</button>
+            </div>
+
             <button id="roll-button" style="display:none;">Lempar Dadu!</button>
 
-            <!-- Div pertanyaan dan input jawaban -->
             <div id="question-div" style="display:none;"></div>
             <input type="text" id="answer-input" />
             <button id="submit-btn">Submit</button>
