@@ -1,61 +1,57 @@
-from browser import document, html
+import pygame
+import sys
 import random
 import math
 
-# --- Setup Elemen HTML dan Canvas ---
-canvas = document["game-canvas"]
-ctx = canvas.getContext("2d")
-info_text = document["info-text"]
-roll_button = document["roll-button"]
-player_select_div = document["player-select-div"]
-player_buttons = document.select(".player-btn")
+# Inisialisasi Pygame
+pygame.init()
 
 # --- Konstanta Global ---
+# Ukuran layar dan papan permainan
 WIDTH, HEIGHT = 600, 600
 ROWS, COLS = 10, 10
 CELL_SIZE = WIDTH // COLS
 
-# Helper untuk konversi warna
-def rgb_to_css(rgb_tuple):
-    return f"rgb({rgb_tuple[0]}, {rgb_tuple[1]}, {rgb_tuple[2]})"
+# Definisi Warna (RGB)
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED   = (220, 60, 60)
+GREEN = (60, 200, 60)
+BLUE  = (60, 60, 220)
+YELLOW= (220, 200, 60)
+DARK  = (40, 40, 40)
 
-# Definisi Warna (sudah dalam format CSS)
-WHITE = rgb_to_css((255, 255, 255))
-BLACK = rgb_to_css((0, 0, 0))
-RED = rgb_to_css((220, 60, 60))
-GREEN = rgb_to_css((60, 200, 60))
-BLUE = rgb_to_css((60, 60, 220))
-YELLOW = rgb_to_css((220, 200, 60))
-DARK = rgb_to_css((40, 40, 40))
-
+# Warna untuk setiap pemain
 PLAYER_COLORS = [RED, BLUE, GREEN, YELLOW]
+
+# Data posisi Ular dan Tangga
+# Format: {kotak_awal: kotak_tujuan}
 snakes  = {16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78}
 ladders = {1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100}
 
-# --- State Permainan (Variabel Global) ---
-game_state = {
-    "num_players": 0,
-    "positions": [],
-    "turn": 0,
-    "winner": None,
-    "dice_result": None
-}
+# --- Setup Jendela dan Font ---
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Ular Tangga 100 Kotak")
+font = pygame.font.SysFont(None, 22)
+bigfont = pygame.font.SysFont(None, 36)
+clock = pygame.time.Clock()
 
-# --- Fungsi Utilitas (Sama seperti Pygame) ---
+# --- Fungsi Utilitas ---
 def get_pos(square):
+    """Mengonversi nomor kotak (1-100) menjadi koordinat piksel (x, y) di tengah kotak."""
     if square < 1: square = 1
     if square > 100: square = 100
     square -= 1
     row = square // COLS
     col = square % COLS
-    if row % 2 == 1:
+    if row % 2 == 1:  # Baris ganjil (1, 3, 5, ...) bergerak dari kanan ke kiri
         col = COLS - 1 - col
     x = col * CELL_SIZE + CELL_SIZE // 2
     y = (ROWS - 1 - row) * CELL_SIZE + CELL_SIZE // 2
     return x, y
 
-# --- Fungsi Menggambar (Ditulis Ulang untuk Canvas) ---
-def draw_arrowhead(tip, tail, color):
+def draw_arrowhead(surface, tip, tail, color):
+    """Menggambar mata panah di titik 'tip' yang menunjuk dari 'tail'."""
     tx, ty = tip
     sx, sy = tail
     dx, dy = tx - sx, ty - sy
@@ -63,161 +59,213 @@ def draw_arrowhead(tip, tail, color):
     if L == 0: return
     ux, uy = dx / L, dy / L
     head_len = 20
-    head_w = 10
+    head_w   = 10
     base_x = tx - ux * head_len
     base_y = ty - uy * head_len
     left  = (base_x - uy * head_w, base_y + ux * head_w)
     right = (base_x + uy * head_w, base_y - ux * head_w)
+    pygame.draw.polygon(surface, color, [(tx, ty), left, right])
 
-    ctx.beginPath()
-    ctx.moveTo(tx, ty)
-    ctx.lineTo(left[0], left[1])
-    ctx.lineTo(right[0], right[1])
-    ctx.closePath()
-    ctx.fillStyle = color
-    ctx.fill()
-
+# --- Fungsi Menggambar ---
 def draw_board():
-    ctx.fillStyle = WHITE
-    ctx.fillRect(0, 0, WIDTH, HEIGHT)
-    ctx.font = "18px Arial"
-    ctx.textAlign = "left"
-    ctx.textBaseline = "top"
-
+    """Menggambar seluruh papan permainan, termasuk nomor, ular, dan tangga."""
+    screen.fill(WHITE)
     for r in range(ROWS):
         for c in range(COLS):
-            rect_x, rect_y = c * CELL_SIZE, r * CELL_SIZE
+            rect = pygame.Rect(c*CELL_SIZE, r*CELL_SIZE, CELL_SIZE, CELL_SIZE)
             draw_row = ROWS - 1 - r
             base = draw_row * COLS
             if draw_row % 2 == 0:
                 num = base + c + 1
             else:
                 num = base + (COLS - 1 - c) + 1
-            
-            ctx.strokeStyle = BLACK
-            ctx.lineWidth = 1
-            ctx.strokeRect(rect_x, rect_y, CELL_SIZE, CELL_SIZE)
-            
-            ctx.fillStyle = BLACK
-            ctx.fillText(str(num), rect_x + 4, rect_y + 4)
+            pygame.draw.rect(screen, BLACK, rect, 1)
+            text = font.render(str(num), True, BLACK)
+            screen.blit(text, (rect.x + 4, rect.y + 4))
 
     for start, end in snakes.items():
         sx, sy = get_pos(start)
         ex, ey = get_pos(end)
-        ctx.beginPath()
-        ctx.moveTo(sx, sy)
-        ctx.lineTo(ex, ey)
-        ctx.strokeStyle = RED
-        ctx.lineWidth = 8
-        ctx.stroke()
-        draw_arrowhead((ex, ey), (sx, sy), RED)
+        pygame.draw.line(screen, RED, (sx, sy), (ex, ey), 8)
+        draw_arrowhead(screen, (ex, ey), (sx, sy), RED)
 
     for start, end in ladders.items():
         sx, sy = get_pos(start)
         ex, ey = get_pos(end)
-        ctx.beginPath()
-        ctx.moveTo(sx, sy)
-        ctx.lineTo(ex, ey)
-        ctx.strokeStyle = GREEN
-        ctx.lineWidth = 8
-        ctx.stroke()
-        draw_arrowhead((ex, ey), (sx, sy), GREEN)
+        pygame.draw.line(screen, GREEN, (sx, sy), (ex, ey), 8)
+        draw_arrowhead(screen, (ex, ey), (sx, sy), GREEN)
 
-def draw_players():
-    offsets = [(0, 0), (8, 8), (-8, 8), (8, -8)]
-    for i, sq in enumerate(game_state["positions"]):
+def draw_players(positions):
+    """Menggambar semua pion pemain di posisi mereka saat ini."""
+    offsets = [(0,0), (10,10), (-10,10), (10,-10)]
+    for i, sq in enumerate(positions):
         x, y = get_pos(sq)
         ox, oy = offsets[i] if i < len(offsets) else (0, 0)
-        
-        ctx.beginPath()
-        ctx.arc(x + ox, y + oy, 12, 0, 2 * math.pi)
-        ctx.fillStyle = PLAYER_COLORS[i]
-        ctx.fill()
-        ctx.strokeStyle = DARK
-        ctx.lineWidth = 2
-        ctx.stroke()
+        pygame.draw.circle(screen, PLAYER_COLORS[i], (x+ox, y+oy), 12)
+        pygame.draw.circle(screen, DARK, (x+ox, y+oy), 12, 2)
 
-def draw_dice(value):
-    ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
-    ctx.fillRect(WIDTH - 100, 20, 80, 80)
-    ctx.strokeStyle = BLACK
-    ctx.lineWidth = 3
-    ctx.strokeRect(WIDTH - 100, 20, 80, 80)
-    
-    ctx.font = "48px Arial"
-    ctx.textAlign = "center"
-    ctx.textBaseline = "middle"
-    ctx.fillStyle = BLACK
-    ctx.fillText(str(value), WIDTH - 60, 60)
+def draw_dice(surface, value):
+    """Menggambar tampilan dadu dengan angka tertentu."""
+    surface.fill((255, 255, 255, 230))
+    pygame.draw.rect(surface, BLACK, (0, 0, 80, 80), 3, border_radius=8)
+    dots = {
+        1: [(40, 40)], 2: [(20, 20), (60, 60)], 3: [(20, 20), (40, 40), (60, 60)],
+        4: [(20, 20), (60, 20), (20, 60), (60, 60)],
+        5: [(20, 20), (60, 20), (40, 40), (20, 60), (60, 60)],
+        6: [(20, 20), (60, 20), (20, 40), (60, 40), (20, 60), (60, 60)]
+    }
+    if value in dots:
+        for px, py in dots[value]:
+            pygame.draw.circle(surface, BLACK, (px, py), 6)
 
-# --- Fungsi Utama Permainan ---
-def redraw_all():
-    """Menggambar ulang seluruh state permainan."""
+# --- Fungsi Logika Permainan ---
+def roll_dice_animation(current_positions, duration=1.5, interval_ms=100):
+    """Menampilkan animasi dadu yang sedang dikocok."""
+    dice_surface = pygame.Surface((80, 80), pygame.SRCALPHA)
+    val = 1
+    start_ms = pygame.time.get_ticks()
+    last_ms = start_ms - interval_ms
+
+    while pygame.time.get_ticks() - start_ms < int(duration * 1000):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                # Saat di web, quit tidak bisa menghentikan script, jadi kita return saja
+                return -1 # Angka -1 sebagai penanda pembatalan
+        now = pygame.time.get_ticks()
+        if now - last_ms >= interval_ms:
+            val = random.randint(1, 6)
+            last_ms = now
+        draw_board()
+        draw_players(current_positions)
+        draw_dice(dice_surface, val)
+        screen.blit(dice_surface, (WIDTH - 100, 20))
+        pygame.display.flip()
+        clock.tick(60)
+    return random.randint(1, 6)
+
+def move_player_stepwise(positions, player_idx, steps):
+    """Menggerakkan pion pemain selangkah demi selangkah."""
+    for _ in range(steps):
+        if positions[player_idx] >= 100: break
+        positions[player_idx] += 1
+        draw_board()
+        draw_players(positions)
+        pygame.display.flip()
+        pygame.time.wait(200)
+
+    sq = positions[player_idx]
+    if sq in snakes:
+        positions[player_idx] = snakes[sq]
+    elif sq in ladders:
+        positions[player_idx] = ladders[sq]
+
+    # Setelah turun/naik, gambar ulang posisi akhir
     draw_board()
-    draw_players()
-    if game_state["dice_result"] is not None:
-        draw_dice(game_state["dice_result"])
-    update_info_text()
+    draw_players(positions)
+    pygame.display.flip()
+    pygame.time.wait(300)
 
-def update_info_text():
-    """Memperbarui teks informasi di bawah papan."""
-    if game_state["winner"] is not None:
-        info_text.textContent = f"🎉 Player {game_state['winner'] + 1} MENANG!"
-        roll_button.disabled = True
-    else:
-        info_text.textContent = f"Giliran Player {game_state['turn'] + 1}"
+# --- Fungsi UI (Antarmuka Pengguna) ---
+def draw_button(rect, label, hovered=False):
+    """Menggambar tombol yang bisa diklik."""
+    color = GREEN if not hovered else (80, 230, 80)
+    pygame.draw.rect(screen, color, rect, border_radius=12)
+    pygame.draw.rect(screen, DARK, rect, 2, border_radius=12)
+    text = bigfont.render(label, True, WHITE)
+    screen.blit(text, (rect.centerx - text.get_width()//2, rect.centery - text.get_height()//2))
 
-def move_player(player_idx, steps):
-    """Memindahkan pemain (instan, tanpa animasi)."""
-    current_pos = game_state["positions"][player_idx]
-    target_pos = current_pos + steps
-    
-    if target_pos > 100:
-        target_pos = 100 # Tidak melebihi 100
-    
-    game_state["positions"][player_idx] = target_pos
-    
-    # Cek ular atau tangga
-    if target_pos in snakes:
-        game_state["positions"][player_idx] = snakes[target_pos]
-    elif target_pos in ladders:
-        game_state["positions"][player_idx] = ladders[target_pos]
+def menu_pemain_mouse():
+    """Menampilkan menu untuk memilih jumlah pemain."""
+    # Loop ini akan terus berjalan sampai pemain memilih jumlah
+    while True:
+        screen.fill(WHITE)
+        title = bigfont.render("Pilih Jumlah Pemain", True, BLACK)
+        subtitle = font.render("Klik salah satu tombol di bawah", True, BLACK)
+        screen.blit(title, (WIDTH//2 - title.get_width()//2, 120))
+        screen.blit(subtitle, (WIDTH//2 - subtitle.get_width()//2, 160))
 
-def handle_roll(event):
-    """Dipanggil saat tombol 'Lempar Dadu' diklik."""
-    if game_state["winner"] is not None:
-        return
+        buttons = []
+        w, h, gap = 120, 60, 20
+        total_w = 3*w + 2*gap
+        start_x = WIDTH//2 - total_w//2
+        y = 240
+        for i, val in enumerate((2, 3, 4)):
+            rect = pygame.Rect(start_x + i*(w+gap), y, w, h)
+            hovered = rect.collidepoint(pygame.mouse.get_pos())
+            draw_button(rect, str(val), hovered)
+            buttons.append((rect, val))
 
-    rolled_value = random.randint(1, 6)
-    game_state["dice_result"] = rolled_value
-    
-    move_player(game_state["turn"], rolled_value)
-    
-    # Cek kemenangan
-    if game_state["positions"][game_state["turn"]] >= 100:
-        game_state["positions"][game_state["turn"]] = 100
-        game_state["winner"] = game_state["turn"]
-    else:
-        # Ganti giliran
-        game_state["turn"] = (game_state["turn"] + 1) % game_state["num_players"]
-    
-    redraw_all()
+        pygame.display.flip()
 
-def start_game(event):
-    """Memulai permainan setelah jumlah pemain dipilih."""
-    num = int(event.target.value)
-    game_state["num_players"] = num
-    game_state["positions"] = [1] * num
-    
-    player_select_div.style.display = "none"
-    roll_button.style.display = "inline-block"
-    
-    redraw_all()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                # Di web, ini tidak akan menutup tab, tapi kita harus menanganinya
+                # agar tidak macet. Kita bisa saja me-return nilai default.
+                return 2 # Default 2 pemain jika tab ditutup
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                for rect, val in buttons:
+                    if rect.collidepoint(event.pos):
+                        return val # Kembalikan jumlah pemain dan keluar dari loop
+        clock.tick(60)
 
-# --- Ikat Event ke Fungsi ---
-roll_button.bind("click", handle_roll)
-for btn in player_buttons:
-    btn.bind("click", start_game)
+# --- Fungsi Utama (Main Loop) ---
+def main():
+    """Fungsi utama yang menjalankan seluruh alur permainan."""
+    num_players = menu_pemain_mouse()
+    positions = [1] * num_players
+    turn = 0
+    winner = None
+    dice_result = None  # Variabel untuk "mengingat" hasil dadu terakhir
 
-# --- Gambar Papan Awal ---
-draw_board()
+    dice_surface = pygame.Surface((80, 80), pygame.SRCALPHA)
+    running = True
+    while running:
+        # Penanganan Event (Input dari pengguna)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                if winner is None and event.key == pygame.K_SPACE:
+                    rolled_value = roll_dice_animation(positions)
+                    
+                    # Cek jika animasi dibatalkan (mis. event QUIT)
+                    if rolled_value == -1:
+                        running = False
+                        break
+
+                    dice_result = rolled_value
+                    move_player_stepwise(positions, turn, dice_result)
+                    
+                    if positions[turn] >= 100:
+                        positions[turn] = 100
+                        winner = turn
+                    
+                    if winner is None:
+                        turn = (turn + 1) % num_players
+
+        # Keluar dari loop utama jika 'running' menjadi False dari dalam event handling
+        if not running:
+            break
+
+        # Logika Menggambar (Apa yang tampil di layar)
+        draw_board()
+        draw_players(positions)
+        if dice_result is not None:
+            draw_dice(dice_surface, dice_result)
+            screen.blit(dice_surface, (WIDTH - 100, 20))
+
+        if winner is None:
+            info_text = f"Giliran Player {turn+1} — Tekan [SPASI] untuk lempar dadu"
+        else:
+            info_text = f"🎉 Player {winner+1} MENANG! Tekan [ESC] untuk keluar."
+        info_surface = font.render(info_text, True, BLACK)
+        screen.blit(info_surface, (10, 10))
+
+        # Update Tampilan
+        pygame.display.flip()
+        clock.tick(60)
+
+
+main()
