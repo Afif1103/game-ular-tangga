@@ -13,9 +13,12 @@ info_text = document["info-text"]
 roll_button = document["roll-button"]
 player_select_div = document["player-select-div"]
 player_buttons = document.select(".player-btn")
-question_div = document["question-div"]  # div baru untuk pertanyaan
-answer_input = document["answer-input"]  # input box
-submit_btn = document["submit-btn"]      # tombol submit jawaban
+question_div = document["question-div"]
+answer_input = document["answer-input"]
+submit_btn = document["submit-btn"]
+player_names_div = document["player-names-div"]
+name_inputs_div = document["name-inputs"]
+start_game_btn = document["start-game-btn"]
 
 # ===== Konstanta =====
 WIDTH, HEIGHT = 600, 600
@@ -41,7 +44,7 @@ game_state = {
     "num_players": 0, "positions": [], "turn": 0, "winner": None,
     "dice_result": 1, "is_moving": False,
     "steps_to_move": 0, "move_animation_id": None,
-    "expected_answer": 0
+    "expected_answer": 0, "player_names": []
 }
 
 # ===== Fungsi Utilitas =====
@@ -110,9 +113,11 @@ def redraw_all():
 
 def update_info_text():
     if game_state["winner"] is not None:
-        info_text.textContent = f"🎉 Player {game_state['winner'] + 1} MENANG!"
+        winner_name = game_state["player_names"][game_state["winner"]]
+        info_text.textContent = f"🎉 {winner_name} MENANG!"
     else:
-        info_text.textContent = f"Giliran Player {game_state['turn'] + 1}"
+        current_name = game_state["player_names"][game_state["turn"]] if game_state["player_names"] else "Player"
+        info_text.textContent = f"Giliran {current_name}"
 
 # ===== Animasi pergerakan =====
 def move_one_step():
@@ -154,9 +159,8 @@ def handle_roll(event):
     current_pos = game_state["positions"][player_idx]
     game_state["expected_answer"] = rolled_value + current_pos
 
-    # Tampilkan pertanyaan
     question_div.style.display = "block"
-    question_div.textContent = f"Player {player_idx + 1}, dadu: {rolled_value}, Posisi sekarang: {current_pos}\nBerapa jumlahnya?"
+    question_div.textContent = f"{game_state['player_names'][player_idx]}, Dice: {rolled_value}, Posisi sekarang: {current_pos}\nBerapa jumlahnya?"
     answer_input.value = ""
 
 def check_answer(event):
@@ -175,17 +179,34 @@ def check_answer(event):
 def start_pawn_animation():
     game_state["move_animation_id"] = timer.set_interval(move_one_step, 220)
 
-def start_game(event):
+# ===== Pemilihan nama pemain =====
+def start_name_input(event):
     num = int(event.target.value)
     game_state["num_players"] = num
-    game_state["positions"] = [1]*num
     player_select_div.style.display = "none"
+    name_inputs_div.clear()
+    for i in range(num):
+        lbl = html.LABEL(f"Nama Player {i+1}: ")
+        inp = html.INPUT(type="text", Id=f"player-name-{i}")
+        name_inputs_div <= lbl + inp + html.BR()
+    player_names_div.style.display = "block"
+
+def start_game_with_names(event):
+    game_state["positions"] = [1]*game_state["num_players"]
+    game_state["player_names"] = []
+    for i in range(game_state["num_players"]):
+        inp = document[f"player-name-{i}"]
+        name = inp.value.strip() or f"Player {i+1}"
+        game_state["player_names"].append(name)
+    player_names_div.style.display = "none"
     roll_button.style.display = "inline-block"
     redraw_all()
 
 # ===== Event binding =====
+for btn in player_buttons:
+    btn.bind("click", start_name_input)
+start_game_btn.bind("click", start_game_with_names)
 roll_button.bind("click", handle_roll)
 submit_btn.bind("click", check_answer)
-for btn in player_buttons: btn.bind("click", start_game)
-draw_board()
 
+draw_board()
