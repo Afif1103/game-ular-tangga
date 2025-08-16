@@ -27,16 +27,15 @@ PLAYER_COLORS = [RED, BLUE, GREEN, YELLOW]
 snakes  = {16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78}
 ladders = {1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100}
 
-# --- State Permainan (dengan tambahan state animasi) ---
+# --- State Permainan ---
 game_state = {
     "num_players": 0, "positions": [], "turn": 0, "winner": None,
-    "dice_result": 1, "is_animating": False,
-    "animation_start_time": 0, "last_flicker_time": 0
+    "dice_result": 1, "is_animating": False, "animation_id": None
 }
 
-# --- Fungsi Utilitas & Menggambar (Tidak ada perubahan di sini) ---
+# --- Fungsi Utilitas ---
 def get_pos(square):
-    if square < 1: square = 1;
+    if square < 1: square = 1
     if square > 100: square = 100
     square -= 1
     row, col = square // COLS, square % COLS
@@ -44,6 +43,7 @@ def get_pos(square):
     x, y = col * CELL_SIZE + CELL_SIZE // 2, (ROWS - 1 - row) * CELL_SIZE + CELL_SIZE // 2
     return x, y
 
+# --- Fungsi Menggambar (Dengan Tampilan Dadu Baru) ---
 def draw_arrowhead(tip, tail, color):
     tx, ty = tip; sx, sy = tail
     dx, dy = tx - sx, ty - sy
@@ -84,9 +84,10 @@ def draw_players():
         ctx.fillStyle = PLAYER_COLORS[i]; ctx.fill()
         ctx.strokeStyle = DARK; ctx.lineWidth = 2; ctx.stroke()
 
-def draw_dice(value):
+def draw_dice(value): # <- FUNGSI INI DI-UPGRADE
     x_base, y_base = WIDTH - 100, 20
-    ctx.fillStyle = "rgba(255, 255, 255, 0.9)"; ctx.fillRect(x_base, y_base, 80, 80)
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
+    ctx.fillRect(x_base, y_base, 80, 80)
     ctx.strokeStyle = BLACK; ctx.lineWidth = 3; ctx.strokeRect(x_base, y_base, 80, 80)
     dots = {
         1: [(40, 40)], 2: [(20, 20), (60, 60)], 3: [(20, 20), (40, 40), (60, 60)],
@@ -96,17 +97,23 @@ def draw_dice(value):
     }
     if value in dots:
         for px, py in dots[value]:
-            ctx.beginPath(); ctx.arc(x_base + px, y_base + py, 6, 0, 2 * math.pi)
-            ctx.fillStyle = BLACK; ctx.fill()
+            ctx.beginPath()
+            ctx.arc(x_base + px, y_base + py, 6, 0, 2 * math.pi)
+            ctx.fillStyle = BLACK
+            ctx.fill()
 
 # --- Fungsi Utama Permainan ---
 def redraw_all():
-    draw_board(); draw_players(); draw_dice(game_state["dice_result"]); update_info_text()
+    draw_board()
+    draw_players()
+    draw_dice(game_state["dice_result"])
+    update_info_text()
 
 def update_info_text():
     if game_state["winner"] is not None:
         info_text.textContent = f"🎉 Player {game_state['winner'] + 1} MENANG!"
-    else: info_text.textContent = f"Giliran Player {game_state['turn'] + 1}"
+    else:
+        info_text.textContent = f"Giliran Player {game_state['turn'] + 1}"
 
 def move_player(player_idx, steps):
     target_pos = game_state["positions"][player_idx] + steps
@@ -115,31 +122,16 @@ def move_player(player_idx, steps):
     if target_pos in snakes: game_state["positions"][player_idx] = snakes[target_pos]
     elif target_pos in ladders: game_state["positions"][player_idx] = ladders[target_pos]
 
-# --- Logika Animasi (DITULIS ULANG) ---
-def animation_loop(timestamp):
-    """Loop utama animasi yang dipanggil oleh browser."""
-    if not game_state["is_animating"]: return
-    
-    # Hitung waktu yang telah berlalu
-    elapsed_time = timestamp - game_state["animation_start_time"]
-    
-    # Hentikan animasi setelah 1.5 detik
-    if elapsed_time > 1500:
-        finish_roll()
-        return
-
-    # Ganti angka dadu setiap 100ms
-    time_since_flicker = timestamp - game_state["last_flicker_time"]
-    if time_since_flicker > 100:
-        game_state["dice_result"] = random.randint(1, 6)
-        game_state["last_flicker_time"] = timestamp
-        redraw_all()
-
-    # Minta browser untuk menjalankan loop ini lagi di frame berikutnya
-    timer.request_animation_frame(animation_loop)
+# --- Logika Animasi (BARU) ---
+def animate_dice_frame():
+    """Satu frame dari animasi dadu."""
+    game_state["dice_result"] = random.randint(1, 6)
+    redraw_all()
 
 def finish_roll():
     """Menyelesaikan lemparan setelah animasi selesai."""
+    timer.clear_interval(game_state["animation_id"])
+    
     rolled_value = random.randint(1, 6)
     game_state["dice_result"] = rolled_value
     
@@ -156,24 +148,32 @@ def finish_roll():
     redraw_all()
 
 def handle_roll(event):
-    """Memulai animasi saat tombol 'Lempar Dadu' diklik."""
-    if game_state["is_animating"] or game_state["winner"] is not None: return
+    """Dipanggil saat tombol 'Lempar Dadu' diklik."""
+    if game_state["is_animating"] or game_state["winner"] is not None:
+        return
 
     game_state["is_animating"] = True
     roll_button.disabled = True
-    game_state["animation_start_time"] = timer.perf_counter()
-    game_state["last_flicker_time"] = game_state["animation_start_time"]
     
-    # Mulai animation loop
-    timer.request_animation_frame(animation_loop)
+    # Jalankan animasi setiap 100ms
+    game_state["animation_id"] = timer.set_interval(animate_dice_frame, 100)
+    # Hentikan animasi dan selesaikan lemparan setelah 1.5 detik
+    timer.set_timeout(finish_roll, 1500)
 
 def start_game(event):
     num = int(event.target.value)
-    game_state["num_players"] = num; game_state["positions"] = [1] * num
-    player_select_div.style.display = "none"; roll_button.style.display = "inline-block"
+    game_state["num_players"] = num
+    game_state["positions"] = [1] * num
+    
+    player_select_div.style.display = "none"
+    roll_button.style.display = "inline-block"
+    
     redraw_all()
 
-# --- Ikat Event dan Gambar Papan Awal ---
+# --- Ikat Event ke Fungsi ---
 roll_button.bind("click", handle_roll)
-for btn in player_buttons: btn.bind("click", start_game)
+for btn in player_buttons:
+    btn.bind("click", start_game)
+
+# --- Gambar Papan Awal ---
 draw_board()
