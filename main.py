@@ -23,9 +23,8 @@ WHITE, BLACK, RED, GREEN, BLUE, YELLOW, DARK = map(rgb_to_css, [
     (255, 255, 255), (0, 0, 0), (220, 60, 60), (60, 200, 60),
     (60, 60, 220), (220, 200, 60), (40, 40, 40)
 ])
-# Diambil dari kode Anda: Warna kotak bolak-balik
 CELL_COLOR_1 = "#fffacd"
-CELL_COLOR_2 = "#e6efa"
+CELL_COLOR_2 = "#e6e6fa"
 
 PLAYER_COLORS = [RED, BLUE, GREEN, YELLOW]
 snakes  = {16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78}
@@ -165,9 +164,18 @@ def handle_roll(event):
     timer.request_animation_frame(animation_loop)
 
 def start_game(event):
+    """Memulai permainan setelah jumlah pemain dipilih."""
     num = int(event.target.value)
-    game_state["num_players"] = num; game_state["positions"] = [1] * num
-    player_select_div.style.display = "none"; roll_button.style.display = "inline-block"
+    game_state["num_players"] = num
+    
+    # ======================================================= #
+    # PERBAIKAN PENTING ADA DI SINI: Pemain mulai dari posisi 1
+    # ======================================================= #
+    game_state["positions"] = [1] * num 
+    
+    player_select_div.style.display = "none"
+    roll_button.style.display = "inline-block"
+    
     redraw_all()
 
 # --- Ikat Event dan Gambar Papan Awal ---
