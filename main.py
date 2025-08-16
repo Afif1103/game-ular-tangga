@@ -1,10 +1,12 @@
 from browser import document, html, timer
 import random
 import math
-import time
+import time # <--- BARIS 1: Impor pustaka 'time'
 
-# Mengatur 'benih' acak agar dadu benar-benar acak setiap kali
-random.seed(time.time())
+# ================================================================= #
+#  PERBAIKAN PENTING: Ini membuat dadu benar-benar acak setiap kali  #
+# ================================================================= #
+random.seed(time.time()) # <--- BARIS 2: Atur benih acak dengan waktu saat ini
 
 # --- Setup Elemen HTML dan Canvas ---
 canvas = document["game-canvas"]
@@ -37,8 +39,7 @@ ladders = {1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100}
 # --- State Permainan ---
 game_state = {
     "num_players": 0, "positions": [], "turn": 0, "winner": None,
-    "dice_result": 1, "is_animating": False,
-    "animation_start_time": 0, "last_flicker_time": 0,
+    "dice_result": 1, "is_moving": False,
     "steps_to_move": 0, "move_animation_id": None
 }
 
@@ -54,7 +55,7 @@ def get_pos(square):
 
 def draw_arrowhead(tip, tail, color):
     tx, ty = tip; sx, sy = tail; dx, dy = tx - sx, ty - sy
-    L = math.hypot(dx, dy);
+    L = math.hypot(dx, dy)
     if L == 0: return
     ux, uy = dx / L, dy / L
     head_len, head_w = 20, 10
@@ -110,7 +111,8 @@ def update_info_text():
 def move_one_step():
     player_idx = game_state["turn"]
     if game_state["steps_to_move"] <= 0 or game_state["positions"][player_idx] >= 100:
-        finish_move(); return
+        finish_move()
+        return
     game_state["positions"][player_idx] += 1
     game_state["steps_to_move"] -= 1
     redraw_all()
@@ -119,46 +121,32 @@ def finish_move():
     timer.clear_interval(game_state["move_animation_id"])
     player_idx = game_state["turn"]
     current_pos = game_state["positions"][player_idx]
-    if current_pos in snakes: game_state["positions"][player_idx] = snakes[current_pos]
-    elif current_pos in ladders: game_state["positions"][player_idx] = ladders[current_pos]
+    if current_pos in snakes:
+        game_state["positions"][player_idx] = snakes[current_pos]
+    elif current_pos in ladders:
+        game_state["positions"][player_idx] = ladders[current_pos]
     redraw_all()
     if game_state["positions"][player_idx] >= 100:
-        game_state["positions"][player_idx] = 100; game_state["winner"] = player_idx
-    else: game_state["turn"] = (game_state["turn"] + 1) % game_state["num_players"]
-    game_state["is_animating"] = False
+        game_state["positions"][player_idx] = 100
+        game_state["winner"] = player_idx
+    else:
+        game_state["turn"] = (game_state["turn"] + 1) % game_state["num_players"]
+    game_state["is_moving"] = False
     roll_button.disabled = False
     redraw_all()
 
-def animation_loop(timestamp):
-    if not game_state["is_animating"]: return
-    elapsed_time = timestamp - game_state["animation_start_time"]
-    
-    # Animasi berjalan selama 2 detik (lebih lama agar terlihat)
-    if elapsed_time > 2000:
-        finish_roll(); return
-        
-    time_since_flicker = timestamp - game_state["last_flicker_time"]
-    # Angka berganti setiap 150ms (lebih lambat agar terlihat)
-    if time_since_flicker > 150:
-        game_state["dice_result"] = random.randint(1, 6)
-        game_state["last_flicker_time"] = timestamp
-        redraw_all()
-    timer.request_animation_frame(animation_loop)
-
-def finish_roll():
+def handle_roll(event):
+    if game_state["is_moving"] or game_state["winner"] is not None: return
+    game_state["is_moving"] = True
+    roll_button.disabled = True
     rolled_value = random.randint(1, 6)
     game_state["dice_result"] = rolled_value
     game_state["steps_to_move"] = rolled_value
     redraw_all()
-    game_state["move_animation_id"] = timer.set_interval(move_one_step, 220)
+    timer.set_timeout(lambda: start_pawn_animation(), 200)
 
-def handle_roll(event):
-    if game_state["is_animating"] or game_state["winner"] is not None: return
-    game_state["is_animating"] = True
-    roll_button.disabled = True
-    game_state["animation_start_time"] = timer.perf_counter()
-    game_state["last_flicker_time"] = game_state["animation_start_time"]
-    timer.request_animation_frame(animation_loop)
+def start_pawn_animation():
+    game_state["move_animation_id"] = timer.set_interval(move_one_step, 220)
 
 def start_game(event):
     num = int(event.target.value)
