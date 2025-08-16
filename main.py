@@ -1,10 +1,12 @@
 from browser import document, html, timer
 import random
 import math
-import time
+import time # <--- BARIS 1: Impor pustaka 'time'
 
-# Mengatur 'benih' acak agar dadu benar-benar acak setiap kali
-random.seed(time.time())
+# ================================================================= #
+#  PERBAIKAN PENTING: Ini membuat dadu benar-benar acak setiap kali  #
+# ================================================================= #
+random.seed(time.time()) # <--- BARIS 2: Atur benih acak dengan waktu saat ini
 
 # --- Setup Elemen HTML dan Canvas ---
 canvas = document["game-canvas"]
@@ -34,14 +36,14 @@ PLAYER_COLORS = [RED, BLUE, GREEN, YELLOW]
 snakes  = {16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78}
 ladders = {1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100}
 
-# --- State Permainan (lebih sederhana) ---
+# --- State Permainan ---
 game_state = {
     "num_players": 0, "positions": [], "turn": 0, "winner": None,
-    "dice_result": 1, "is_moving": False, # 'is_animating' diganti 'is_moving'
+    "dice_result": 1, "is_moving": False,
     "steps_to_move": 0, "move_animation_id": None
 }
 
-# --- Fungsi Utilitas & Menggambar (Tidak ada perubahan) ---
+# --- Fungsi Utilitas & Menggambar ---
 def get_pos(square):
     if square < 1: square = 1;
     if square > 100: square = 100
@@ -133,28 +135,17 @@ def finish_move():
     roll_button.disabled = False
     redraw_all()
 
-# --- FUNGSI UTAMA & EVENT HANDLER (Sederhana)---
-
 def handle_roll(event):
-    """Langsung lempar dadu dan mulai gerakan pion."""
     if game_state["is_moving"] or game_state["winner"] is not None: return
-
     game_state["is_moving"] = True
     roll_button.disabled = True
-    
-    # Langsung dapatkan hasil dadu
     rolled_value = random.randint(1, 6)
     game_state["dice_result"] = rolled_value
     game_state["steps_to_move"] = rolled_value
-    
-    # Tampilkan hasil dadu di layar
     redraw_all()
-    
-    # Langsung mulai animasi pergerakan pion setelah jeda singkat
     timer.set_timeout(lambda: start_pawn_animation(), 200)
 
 def start_pawn_animation():
-    """Memulai timer untuk gerakan pion."""
     game_state["move_animation_id"] = timer.set_interval(move_one_step, 220)
 
 def start_game(event):
