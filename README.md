@@ -1,7 +1,8 @@
 # game-ular-tangga
 Proyek Capstone Game Ular Tangga
 
-# Capstone Project: Ular Tangga Cerdas
+# Capstone Project: Ular Tangga Berhitung
+
 
 Game Ular Tangga klasik yang dibangun ulang untuk web, dengan sentuhan modern berupa tantangan berhitung untuk bisa maju.
 
